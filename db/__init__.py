@@ -118,6 +118,6 @@ def _seed_admin(conn: sqlite3.Connection) -> None:
     uid = conn.execute("SELECT id FROM users WHERE email='admin@ndpr.local'").fetchone()["id"]
     conn.execute(
         "INSERT OR IGNORE INTO subscriptions (user_id, tier, status) VALUES (?,?,?)",
-        (uid, "enterprise", "active"),
+        (uid, "elite", "active"),
     )
     conn.commit()

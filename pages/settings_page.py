@@ -104,7 +104,7 @@ def settings_page() -> None:
     # ── API Key ───────────────────────────────────────────────────────────────
     with tab_api:
         st.markdown("### API Key")
-        if user["tier"] not in ("pro", "enterprise"):
+        if user["tier"] not in ("pro", "elite"):
             st.markdown(
                 "<div class='card-warn'>"
                 "🔌 API access is available on the <b>Pro</b> and <b>Enterprise</b> plans.<br>"

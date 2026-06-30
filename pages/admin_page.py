@@ -31,7 +31,7 @@ def admin_page() -> None:
     n_audits  = count_audit_entries()
 
     total_revenue = sum(v["total_ngn"] for v in revenue.values())
-    paying_users  = sum(1 for u in all_users if u.get("tier","free") not in ("free","enterprise"))
+    paying_users  = sum(1 for u in all_users if u.get("tier","free") != "free")
 
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Total Users",      len(all_users))
