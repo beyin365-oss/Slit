@@ -1,6 +1,6 @@
-# NDPR Data Redaction Tool
+# Slit — Enterprise Data Safety & Compliance Platform
 
-A professional Streamlit app for redacting personally identifiable information (PII) from CSV, Excel, and JSON files — built for NDPA 2023 / NDPR compliance in Nigerian fintech and data centres.
+Slit is a production-grade data safety SaaS — trusted by AI labs, banks, hospitals, fintech companies, and data centres. It redacts, masks, hashes, and pseudonymizes PII from CSV, Excel, and JSON files with full NDPA 2023 / NDPR / GDPR-aligned audit trails, tiered subscriptions, and Paystack billing.
 
 ## Run & Operate
 
