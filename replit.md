@@ -1,45 +1,50 @@
-# [Project name]
+# NDPR Data Redaction Tool
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A professional Streamlit app for redacting personally identifiable information (PII) from CSV, Excel, and JSON files — built for NDPA 2023 / NDPR compliance in Nigerian fintech and data centres.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `streamlit run app.py --server.port 5000` — start the Streamlit app (workflow: "NDPR Redaction Tool")
+- `ACCESS_CODE` env var — access gate password (default behaviour: contact admin)
+- Audit logs persist to `audit_logs.json` in the project root
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Python 3.13 · Streamlit 1.58
+- pandas, openpyxl, xlrd — file parsing
+- Faker — pseudonymisation
+- fpdf2 — PDF compliance reports
+- hashlib (stdlib) — SHA-256 hashing & file integrity
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `app.py` — main Streamlit app (auth gate, CSS, 4-tab UI)
+- `utils/detector.py` — regex + column-name PII detection
+- `utils/redactor.py` — hash / pseudonymize / mask / remove / regex
+- `utils/audit.py` — audit entry creation, JSON persistence, PDF/CSV export
+- `utils/file_handler.py` — CSV/Excel/JSON read & write
+- `audit_logs.json` — persisted audit log (auto-created on first run)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Chunked processing (5000 rows/chunk) avoids memory spikes on large files
+- Pseudonymisation is seed-deterministic: same input → same fake value within a session
+- All regex patterns are validated and capped at 500 chars before use (DoS prevention)
+- Audit log is persisted to disk and merged with in-session entries on every render
+- Access code is env-var controlled; default is never shown in production UI
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Blue (#2563eb) and gold (#f0a500) colour scheme — clean, professional
+- Tabs: Upload & Redact | Preview & Process | Audit Log | About NDPR
+- Dark mode default; light mode toggle in sidebar
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `ACCESS_CODE` env var must be set before deploying publicly
+- `audit_logs.json` grows unboundedly — archive or rotate periodically in production
+- `xlrd` only supports `.xls` (old Excel); `.xlsx` uses `openpyxl`
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See the `pnpm-workspace` skill for the monorepo's Node/TS structure (API server runs separately)
