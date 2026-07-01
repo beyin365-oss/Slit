@@ -3,11 +3,14 @@ Authentication database operations.
 Password hashing via PBKDF2-HMAC-SHA256 (no external deps required).
 """
 
+from __future__ import annotations
+
 import hashlib
 import os
 import secrets
 from datetime import datetime, timedelta
-from db import get_db
+
+from db.connection import get_db, IS_POSTGRES
 from config import PBKDF2_ITERATIONS
 
 
@@ -36,19 +39,34 @@ def verify_password(password: str, stored: str) -> bool:
 def register_user(email: str, full_name: str, password: str) -> tuple[bool, str]:
     """Create a new user with a Free subscription. Returns (success, message)."""
     conn = get_db()
+
+    # Check for existing account (case-insensitive; emails stored lowercase)
     existing = conn.execute(
-        "SELECT id FROM users WHERE email=? COLLATE NOCASE", (email,)
+        "SELECT id FROM users WHERE LOWER(email)=LOWER(?)", (email.strip(),)
     ).fetchone()
     if existing:
         return False, "An account with this email already exists."
 
-    ph = hash_password(password)
+    ph  = hash_password(password)
+    now = datetime.now().isoformat(timespec="seconds")
+
     try:
-        conn.execute(
-            "INSERT INTO users (email, password_hash, full_name) VALUES (?,?,?)",
-            (email.strip().lower(), ph, full_name.strip()),
-        )
-        uid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        if IS_POSTGRES:
+            # PostgreSQL: use RETURNING id to retrieve the new row id
+            row = conn.execute(
+                "INSERT INTO users (email, password_hash, full_name, created_at) "
+                "VALUES (?,?,?,?) RETURNING id",
+                (email.strip().lower(), ph, full_name.strip(), now),
+            ).fetchone()
+            uid = row["id"]
+        else:
+            conn.execute(
+                "INSERT INTO users (email, password_hash, full_name, created_at) "
+                "VALUES (?,?,?,?)",
+                (email.strip().lower(), ph, full_name.strip(), now),
+            )
+            uid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
         conn.execute(
             "INSERT INTO subscriptions (user_id, tier, status) VALUES (?,?,?)",
             (uid, "free", "active"),
@@ -67,7 +85,7 @@ def login_user(email: str, password: str) -> tuple[dict | None, str]:
         "SELECT u.*, s.tier, s.status as sub_status "
         "FROM users u "
         "LEFT JOIN subscriptions s ON s.user_id=u.id AND s.status='active' "
-        "WHERE u.email=? COLLATE NOCASE",
+        "WHERE LOWER(u.email)=LOWER(?)",
         (email.strip(),),
     ).fetchone()
 
@@ -78,7 +96,6 @@ def login_user(email: str, password: str) -> tuple[dict | None, str]:
     if not verify_password(password, row["password_hash"]):
         return None, "Incorrect password."
 
-    # Update last_login
     conn.execute(
         "UPDATE users SET last_login=? WHERE id=?",
         (datetime.now().isoformat(timespec="seconds"), row["id"]),

@@ -113,9 +113,15 @@ def billing_page() -> None:
                 st.rerun()
 
         else:
-            ref = generate_reference(user["id"], target_tier)
-            if "pending_ref" not in st.session_state:
-                st.session_state.pending_ref = None
+            # Generate a fresh reference tied to this user + target tier
+            if (
+                "pending_ref" not in st.session_state
+                or st.session_state.get("pending_tier") != target_tier
+            ):
+                st.session_state.pending_ref  = generate_reference(user["id"], target_tier)
+                st.session_state.pending_tier = target_tier
+
+            ref = st.session_state.pending_ref
 
             c1, c2 = st.columns(2)
             with c1:
@@ -143,14 +149,30 @@ def billing_page() -> None:
                 if st.button("✅ Verify Payment", use_container_width=True):
                     result = verify_transaction(verify_ref)
                     if result.get("success"):
-                        amt = result.get("amount_ngn", 0)
-                        set_subscription(user["id"], target_tier, verify_ref, amt)
-                        st.session_state.user["tier"] = target_tier
-                        st.success(
-                            f"✅ Payment verified! You are now on **{target_cfg['name']}**."
-                        )
-                        st.session_state.pending_ref = None
-                        st.rerun()
+                        # ── Security: bind payment to this session's user + tier ──
+                        paid_email  = (result.get("email") or "").lower().strip()
+                        paid_amount = result.get("amount_ngn", 0)
+                        expected_amount = tier_amount(target_tier)
+
+                        if paid_email and paid_email != user["email"].lower():
+                            st.error(
+                                "❌ This payment was made from a different email address. "
+                                "Contact support if you believe this is an error."
+                            )
+                        elif paid_amount < expected_amount:
+                            st.error(
+                                f"❌ Payment amount ₦{paid_amount:,} is below the required "
+                                f"₦{expected_amount:,} for the {target_cfg['name']} plan."
+                            )
+                        else:
+                            set_subscription(user["id"], target_tier, verify_ref, paid_amount)
+                            st.session_state.user["tier"] = target_tier
+                            st.session_state.pending_ref  = None
+                            st.session_state.pending_tier = None
+                            st.success(
+                                f"✅ Payment verified! You are now on **{target_cfg['name']}**."
+                            )
+                            st.rerun()
                     else:
                         st.error(f"❌ {result.get('error', 'Payment not verified.')}")
 

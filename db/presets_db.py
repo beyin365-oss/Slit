@@ -1,20 +1,30 @@
 """
-Redaction preset management (per-user, stored in SQLite as JSON blobs).
+Redaction preset management (per-user, stored as JSON blobs).
 """
 
+from __future__ import annotations
+
 import json
-from db import get_db
+from db.connection import get_db, IS_POSTGRES
 
 
 def save_preset(user_id: int, name: str, config: dict) -> tuple[bool, str]:
     conn = get_db()
     try:
-        conn.execute(
-            """INSERT INTO presets (user_id, name, config_json)
-               VALUES (?,?,?)
-               ON CONFLICT(user_id, name) DO UPDATE SET config_json=excluded.config_json""",
-            (user_id, name.strip(), json.dumps(config)),
-        )
+        if IS_POSTGRES:
+            conn.execute(
+                """INSERT INTO presets (user_id, name, config_json)
+                   VALUES (?,?,?)
+                   ON CONFLICT(user_id, name) DO UPDATE SET config_json=EXCLUDED.config_json""",
+                (user_id, name.strip(), json.dumps(config)),
+            )
+        else:
+            conn.execute(
+                """INSERT INTO presets (user_id, name, config_json)
+                   VALUES (?,?,?)
+                   ON CONFLICT(user_id, name) DO UPDATE SET config_json=excluded.config_json""",
+                (user_id, name.strip(), json.dumps(config)),
+            )
         conn.commit()
         return True, f"Preset '{name}' saved."
     except Exception as e:
@@ -48,6 +58,7 @@ def delete_preset(user_id: int, name: str) -> bool:
 
 def count_presets(user_id: int) -> int:
     conn = get_db()
+    # Named alias so RealDictCursor (PG) and sqlite3.Row both support key access
     return conn.execute(
-        "SELECT COUNT(*) FROM presets WHERE user_id=?", (user_id,)
-    ).fetchone()[0]
+        "SELECT COUNT(*) AS cnt FROM presets WHERE user_id=?", (user_id,)
+    ).fetchone()["cnt"]

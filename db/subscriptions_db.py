@@ -2,8 +2,10 @@
 Subscription management: tier changes, Paystack verification, revenue reporting.
 """
 
+from __future__ import annotations
+
 from datetime import datetime, timedelta
-from db import get_db
+from db.connection import get_db
 
 
 def get_subscription(user_id: int) -> dict | None:
@@ -30,9 +32,9 @@ def set_subscription(user_id: int, tier: str, paystack_ref: str = "",
     )
     conn.execute(
         "INSERT INTO subscriptions "
-        "(user_id, tier, status, paystack_ref, amount_ngn, start_date, end_date) "
-        "VALUES (?,?,?,?,?,?,?)",
-        (user_id, tier, "active", paystack_ref, amount_ngn, now, end),
+        "(user_id, tier, status, paystack_ref, amount_ngn, start_date, end_date, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        (user_id, tier, "active", paystack_ref, amount_ngn, now, end, now),
     )
     conn.commit()
 
@@ -46,8 +48,8 @@ def cancel_subscription(user_id: int) -> None:
         (now, user_id),
     )
     conn.execute(
-        "INSERT INTO subscriptions (user_id, tier, status) VALUES (?,?,?)",
-        (user_id, "free", "active"),
+        "INSERT INTO subscriptions (user_id, tier, status, created_at) VALUES (?,?,?,?)",
+        (user_id, "free", "active", now),
     )
     conn.commit()
 

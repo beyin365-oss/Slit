@@ -2,7 +2,9 @@
 Audit log database persistence (per-user, searchable).
 """
 
-from db import get_db
+from __future__ import annotations
+
+from db.connection import get_db
 
 
 def save_audit_entry(user_id: int, entry: dict) -> None:
@@ -57,4 +59,5 @@ def get_all_audit_log(limit: int = 500) -> list[dict]:
 
 def count_audit_entries() -> int:
     conn = get_db()
-    return conn.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
+    # Use named alias so RealDictCursor (PG) and sqlite3.Row both support key access
+    return conn.execute("SELECT COUNT(*) AS cnt FROM audit_logs").fetchone()["cnt"]

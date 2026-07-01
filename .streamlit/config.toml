@@ -1,10 +1,15 @@
 [server]
-headless = true
-address = "0.0.0.0"
-port = 5000
+headless      = true
+address       = "0.0.0.0"
+# Port is intentionally NOT set here so it can be overridden via CLI:
+#   Replit:  streamlit run app.py --server.port 5000
+#   Render / Railway / Heroku:  streamlit run app.py --server.port $PORT
+# This file controls everything except the port.
+
+enableXsrfProtection = true
 
 [browser]
 gatherUsageStats = false
 
 [theme]
-primaryColor = "#008751"
+primaryColor   = "#008751"
